@@ -1,51 +1,28 @@
-# Definir la imagen base
-FROM php:7.4-fpm-alpine
+FROM php:7.4-apache
 
-# Instalar las dependencias necesarias
-RUN apk add --no-cache \
-    nginx \
-    supervisor \
-    git \
-    curl \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    oniguruma-dev \
-    libxml2-dev \
-    postgresql-dev \
-    zip \
-    unzip \
-    zlib-dev \
-    && docker-php-ext-configure gd \
-    --with-freetype=/usr/include/ \
-    --with-jpeg=/usr/include/ \
-    && docker-php-ext-install -j$(nproc) \
-    gd \
-    mbstring \
-    pdo \
-    pdo_pgsql \
-    pdo_mysql \
-    xml \
-    zip \
-    && curl --silent --show-error https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y git zip unzip && \
+    docker-php-ext-install pdo_mysql && \
+    a2enmod rewrite
 
-# Definir el directorio de trabajo
-WORKDIR /app
+# Copy source code
+COPY . /var/www/html
 
-# Copiar los archivos del proyecto
-COPY . /app
+# Set working directory
+WORKDIR /var/www/html
 
-# Instalar las dependencias del proyecto
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copiar la configuración de Nginx
-COPY docker/nginx.conf /etc/nginx/nginx.conf
+# Install application dependencies
+RUN composer install --no-dev
 
-# Copiar la configuración de Supervisor
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Set file permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Definir los puertos que serán expuestos
+# Expose port 80
 EXPOSE 80
 
-# Ejecutar los servicios de Nginx y PHP-FPM con Supervisor
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Start Apache
+CMD ["apache2-foreground"]
