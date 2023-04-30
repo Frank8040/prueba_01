@@ -1,0 +1,14 @@
+# directorios y archivos generados por Laravel
+/vendor
+/node_modules
+/public/storage
+/storage/*.key
+/storage/logs/*.log
+
+# archivos de entorno
+.env
+.env.*
+
+# archivos de caché
+.cache
+.phpunit.result.cache
